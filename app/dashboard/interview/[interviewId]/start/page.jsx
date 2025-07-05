@@ -12,23 +12,23 @@ import { FaFlagCheckered } from "react-icons/fa";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
-// Fallback Progress Bar component
+// Custom animated progress bar
 const ProgressBar = ({ value }) => {
   return (
-    <div className="w-full bg-gray-200 rounded-full h-2.5">
-      <div 
-        className="bg-blue-600 h-2.5 rounded-full" 
-        style={{ width: `${value}%` }}
-      ></div>
+    <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+      <motion.div
+        className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full"
+        initial={{ width: 0 }}
+        animate={{ width: `${value}%` }}
+        transition={{ duration: 0.6 }}
+      />
     </div>
   );
 };
 
-// Fallback Skeleton component
+// Skeleton loader for fallback
 const Skeleton = ({ className }) => {
-  return (
-    <div className={`bg-gray-200 animate-pulse rounded ${className}`}></div>
-  );
+  return <div className={`bg-gray-300 animate-pulse rounded ${className}`} />;
 };
 
 function StartInterview({ params }) {
@@ -60,18 +60,16 @@ function StartInterview({ params }) {
   };
 
   const handleNextQuestion = () => {
-    setActiveQuestionIndex(prev => {
-      const nextIndex = prev + 1;
+    setActiveQuestionIndex((prev) => {
       window.scrollTo({ top: 0, behavior: "smooth" });
-      return nextIndex;
+      return prev + 1;
     });
   };
 
   const handlePreviousQuestion = () => {
-    setActiveQuestionIndex(prev => {
-      const prevIndex = prev - 1;
+    setActiveQuestionIndex((prev) => {
       window.scrollTo({ top: 0, behavior: "smooth" });
-      return prevIndex;
+      return prev - 1;
     });
   };
 
@@ -101,36 +99,39 @@ function StartInterview({ params }) {
   if (!mockInterviewQuestion) {
     return (
       <div className="text-center py-10">
-        <h2 className="text-xl font-semibold">Interview not found</h2>
+        <h2 className="text-xl font-semibold text-red-600">Interview not found</h2>
         <p className="text-muted-foreground mt-2">
-          The requested interview could not be loaded.
+          The requested interview could not be loaded. Please try again later.
         </p>
       </div>
     );
   }
 
-  const progressValue = ((activeQuestionIndex + 1) / mockInterviewQuestion.length) * 100;
+  const progressValue =
+    ((activeQuestionIndex + 1) / mockInterviewQuestion.length) * 100;
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="space-y-8"
+      className="space-y-10"
     >
-      <div className="space-y-2">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-primary">
+      {/* Header & Progress */}
+      <div className="space-y-3">
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-2">
+          <h1 className="text-2xl font-bold text-indigo-700">
             {interviewData?.title || "Mock Interview"}
           </h1>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-gray-600 tracking-wide">
             Question {activeQuestionIndex + 1} of {mockInterviewQuestion.length}
           </span>
         </div>
         <ProgressBar value={progressValue} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+      {/* Main Content */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <QuestionSection
           mockInterviewQuestion={mockInterviewQuestion}
           activeQuestionIndex={activeQuestionIndex}
@@ -142,40 +143,42 @@ function StartInterview({ params }) {
         />
       </div>
 
-      <div className="flex justify-between items-center">
-        <div>
-          {activeQuestionIndex > 0 && (
-            <Button
-              className="gap-1 transition-all hover:scale-105"
-              onClick={handlePreviousQuestion}
-              variant="outline"
-            >
-              <IoIosArrowBack className="w-4 h-4" />
-              Previous
+      {/* Navigation */}
+      <div className="flex justify-between items-center pt-4 border-t">
+        {/* Back Button */}
+        {activeQuestionIndex > 0 ? (
+          <Button
+            onClick={handlePreviousQuestion}
+            variant="outline"
+            className="gap-1 transition-transform hover:scale-105"
+          >
+            <IoIosArrowBack className="w-4 h-4" />
+            Previous
+          </Button>
+        ) : (
+          <div></div>
+        )}
+
+        {/* Next or Finish */}
+        {activeQuestionIndex !== mockInterviewQuestion.length - 1 ? (
+          <Button
+            onClick={handleNextQuestion}
+            className="gap-1 bg-indigo-600 text-white hover:bg-indigo-700 transition-transform hover:scale-105"
+          >
+            Next
+            <MdNavigateNext className="w-5 h-5" />
+          </Button>
+        ) : (
+          <Link
+            href={`/dashboard/interview/${interviewData?.mockId}/feedback`}
+            className="inline-flex"
+          >
+            <Button className="gap-2 bg-green-600 hover:bg-green-700 transition-transform hover:scale-105 text-white">
+              Finish Interview
+              <FaFlagCheckered className="w-4 h-4" />
             </Button>
-          )}
-        </div>
-        <div className="flex gap-4">
-          {activeQuestionIndex !== mockInterviewQuestion.length - 1 ? (
-            <Button
-              onClick={handleNextQuestion}
-              className="gap-1 transition-all hover:scale-105"
-            >
-              Next
-              <MdNavigateNext className="w-5 h-5" />
-            </Button>
-          ) : (
-            <Link
-              href={"/dashboard/interview/" + interviewData?.mockId + "/feedback"}
-              className="inline-flex"
-            >
-              <Button className="gap-2 bg-green-600 hover:bg-green-700 transition-all hover:scale-105">
-                Finish Interview
-                <FaFlagCheckered className="w-4 h-4" />
-              </Button>
-            </Link>
-          )}
-        </div>
+          </Link>
+        )}
       </div>
     </motion.div>
   );

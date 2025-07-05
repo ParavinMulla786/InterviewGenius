@@ -12,12 +12,9 @@ import { db } from "../../../../../../utils/db";
 import { UserAnswer } from "../../../../../../utils/schema";
 import { useUser } from "@clerk/nextjs";
 import moment from "moment";
+import { motion } from "framer-motion";
 
-function RecordQuestionSection({
-  mockInterviewQuestion,
-  activeQuestionIndex,
-  interviewData,
-}) {
+function RecordQuestionSection({ mockInterviewQuestion, activeQuestionIndex, interviewData }) {
   const [userAnswer, setUserAnswer] = useState("");
   const [chat, setChat] = useState(null);
   const { user } = useUser();
@@ -32,10 +29,7 @@ function RecordQuestionSection({
     startSpeechToText,
     stopSpeechToText,
     setResults,
-  } = useSpeechToText({
-    continuous: true,
-    useLegacyResults: false,
-  });
+  } = useSpeechToText({ continuous: true, useLegacyResults: false });
 
   useEffect(() => {
     const initChatSession = async () => {
@@ -50,27 +44,24 @@ function RecordQuestionSection({
     initChatSession();
   }, []);
 
-  // Append speech results
   useEffect(() => {
     results.forEach((result) => {
       setUserAnswer((prev) => prev + " " + result.transcript);
     });
   }, [results]);
 
-  // Handle recording toggle
   const StartStopRecording = () => {
     if (isRecording) {
       stopSpeechToText();
-      setRecorded(true); // mark recording finished
+      setRecorded(true);
     } else {
-      setUserAnswer(""); // clear previous answer
+      setUserAnswer("");
       setResults([]);
       setRecorded(false);
       startSpeechToText();
     }
   };
 
-  // Submit after stopping recording manually
   useEffect(() => {
     if (!isRecording && recorded && userAnswer.length > 10) {
       UpdateUserAnswer();
@@ -80,7 +71,6 @@ function RecordQuestionSection({
   const UpdateUserAnswer = async () => {
     if (!chat || !userAnswer) return;
     setLoading(true);
-
     try {
       const prompt = `
         Question: ${mockInterviewQuestion[activeQuestionIndex]?.question}
@@ -91,15 +81,9 @@ function RecordQuestionSection({
           "feedback": "..."
         }
       `;
-
       const result = await chat.sendMessage(prompt);
       const responseText = await result.response.text();
-
-      const cleanedJSON = responseText
-        .replace(/```json/, "")
-        .replace(/```/, "")
-        .trim();
-
+      const cleanedJSON = responseText.replace(/```json/, "").replace(/```/, "").trim();
       const jsonFeedback = JSON.parse(cleanedJSON);
 
       await db.insert(UserAnswer).values({
@@ -126,51 +110,67 @@ function RecordQuestionSection({
   };
 
   return (
-    <div className="flex items-center justify-center flex-col">
-      <div className="flex flex-col justify-center items-center rounded-lg p-5 mt-20 bg-black relative">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="flex items-center justify-center flex-col gap-6 px-4"
+    >
+      <div className="relative rounded-xl p-5 mt-10 w-full max-w-lg bg-white/10 backdrop-blur-md border border-white/20 shadow-xl overflow-hidden">
         <Image
           src="/webcam3.png"
           alt="WebCAM"
-          width={140}
-          height={140}
-          className="absolute"
+          width={120}
+          height={120}
+          className="absolute -top-8 -left-8 opacity-20 z-0"
         />
-        <Webcam
-          mirrored
-          style={{
-            height: 300,
-            width: "100%",
-            zIndex: 100,
-          }}
-        />
+        <div className="z-10 relative rounded-xl overflow-hidden border-2 border-gray-300">
+          <Webcam
+            mirrored
+            style={{
+              height: 280,
+              width: "100%",
+              borderRadius: "0.75rem",
+              objectFit: "cover",
+            }}
+          />
+        </div>
       </div>
 
       <Button
         disabled={loading}
-        variant="outline"
-        className="my-10"
+        variant={isRecording ? "destructive" : "default"}
         onClick={StartStopRecording}
+        className={`transition-all hover:scale-105 gap-2 text-base px-6 py-3 rounded-full shadow-md ${
+          isRecording ? "animate-pulse" : ""
+        }`}
       >
         {isRecording ? (
-          <h2 className="text-red-500 flex animate-pulse items-center gap-2">
-            <StopCircle /> Stop Recording...
-          </h2>
+          <>
+            <StopCircle className="w-5 h-5" />
+            Stop Recording...
+          </>
         ) : (
-          <h2 className="flex gap-2 items-center">
-            <Mic /> Record Answer
-          </h2>
+          <>
+            <Mic className="w-5 h-5" />
+            Record Answer
+          </>
         )}
       </Button>
 
-      {/* Optional Debug or Manual Save Button */}
       {userAnswer && !isRecording && (
-        <div className="text-center">
-          <p className="text-muted-foreground px-4 max-w-lg">{userAnswer}</p>
-          {/* Optional Manual Save Button */}
-          {/* <Button onClick={UpdateUserAnswer} disabled={loading}>Submit</Button> */}
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="w-full max-w-lg bg-muted p-4 rounded-xl text-center shadow-inner border"
+        >
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            <span className="font-semibold text-primary">Your Answer:</span> {userAnswer}
+          </p>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
